@@ -13,8 +13,20 @@ import assert from 'node:assert/strict';
 
 import { startNotifyServer } from '../lib/server.js';
 
-/** A port unlikely to collide with anything else on the machine. */
-const PORT = 19876;
+/**
+ * Each test gets its own port.
+ *
+ * Every test here starts a server and closes it, and `fetch` keeps a pooled
+ * keep-alive connection keyed by origin. Reusing one port across the file
+ * therefore let undici hand a later test a socket belonging to a server that
+ * had already been closed, which surfaced as a bare `fetch failed`
+ * (`UND_ERR_SOCKET: other side closed`) on the first request of a test — a
+ * test-isolation artifact, not an endpoint fault. The endpoint itself is a
+ * single long-lived server whose port changes only with the setting.
+ */
+let nextPort = 19876;
+/** A port unique to one test, or to one pair of binds within a test. */
+const allocPort = () => nextPort++;
 
 test('a non-positive port disables the endpoint without listening', async () => {
   const handle = await startNotifyServer(0, () => ({}));
@@ -24,6 +36,7 @@ test('a non-positive port disables the endpoint without listening', async () => 
 });
 
 test('the endpoint serves the current payload as JSON', async () => {
+  const PORT = allocPort();
   const payload = { hasChanges: true, added: ['new/free'], removed: [], totalFree: 3, fetchedAt: 1 };
   const handle = await startNotifyServer(PORT, () => payload);
   try {
@@ -38,6 +51,7 @@ test('the endpoint serves the current payload as JSON', async () => {
 });
 
 test('the endpoint answers CORS preflight and 404s everything else', async () => {
+  const PORT = allocPort();
   const handle = await startNotifyServer(PORT, () => ({}));
   try {
     const preflight = await fetch(`http://127.0.0.1:${PORT}/notify`, { method: 'OPTIONS' });
@@ -50,6 +64,7 @@ test('the endpoint answers CORS preflight and 404s everything else', async () =>
 });
 
 test('every response carries CORS headers, including the failures', async () => {
+  const PORT = allocPort();
   // The page is served from a different loopback origin, so *no* answer is
   // readable without `Access-Control-Allow-Origin`. Sending it only on 200 was a
   // real bug: an older plugin build answers `/state` with a bare 404, the browser
@@ -71,6 +86,7 @@ test('every response carries CORS headers, including the failures', async () => 
 });
 
 test('the state route is served when a snapshot provider is supplied', async () => {
+  const PORT = allocPort();
   const state = { fetchedAt: 1, lastFetchSucceeded: true, models: [{ id: 'm/free' }], changeLog: [], tokenStats: {} };
   const handle = await startNotifyServer(PORT, () => ({}), () => state);
   try {
@@ -83,6 +99,7 @@ test('the state route is served when a snapshot provider is supplied', async () 
 });
 
 test('a deployment with no state provider answers 404 readably rather than unreadably', async () => {
+  const PORT = allocPort();
   // Without a snapshot provider the route does not exist. The 404 still has to
   // carry CORS headers, or the page cannot tell "no such route" apart from
   // "network is down" — which is the whole point of the fix above.
@@ -97,6 +114,7 @@ test('a deployment with no state provider answers 404 readably rather than unrea
 });
 
 test('the preflight answer allows the private-network check', async () => {
+  const PORT = allocPort();
   // A page on a public origin reaching a loopback address has to be granted this
   // during preflight, or the browser drops a request that is legitimately
   // talking to its own host.
@@ -118,6 +136,7 @@ test('the preflight answer allows the private-network check', async () => {
 });
 
 test('a port that cannot be bound rejects instead of moving to another one', async () => {
+  const PORT = allocPort();
   const first = await startNotifyServer(PORT, () => ({}));
   try {
     await assert.rejects(
@@ -131,6 +150,7 @@ test('a port that cannot be bound rejects instead of moving to another one', asy
 });
 
 test('closing releases the port for a later bind', async () => {
+  const PORT = allocPort();
   const first = await startNotifyServer(PORT, () => ({}));
   await first.close();
   // A rebind on the same port proves the listener was actually released, which
