@@ -1,0 +1,9 @@
+node_modules/
+*.log
+*.tgz
+.DS_Store
+.~lock.*#
+
+# Local artifacts of the Harness profile's pnpm layout, not this repo's lockfile.
+pnpm-lock.yaml
+pnpm-workspace.yaml

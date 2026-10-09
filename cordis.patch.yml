@@ -1,0 +1,39 @@
+# Kilo Gateway free-model provider for DeepSeek Harness.
+#
+# Registers a Kilo Gateway LLM adapter that auto-discovers free models,
+# refreshes the list daily, and notifies the user of changes.
+#
+# The `config` here is the composition base only. `apiKeyEnv`,
+# `refreshIntervalMs`, `notifyPort`, `notifyOnFirstLoad`, `maxRetries`, and
+# `requestTimeoutMs` are `.volatile()` fields, so the Plugins page edits them
+# without reloading this entry: a saved change mutates a reference cell the
+# running plugin reads on the next use.
+#
+# `maxRetries` and `requestTimeoutMs` are omitted on purpose and take their
+# schema defaults, keeping this base to the minimum a deployment must state.
+# `apiKeyEnv` is omitted for the same reason and because it is a credential
+# *reference*, never the secret: the settings page writes the key itself through
+# the credentials service, and an unset reference selects anonymous access.
+#
+# `baseURL` and `catalogUrl` are ordinary fields — editing those rewrites this
+# entry's config and reloads the fiber, which is why they are not on the page.
+
+- insert:
+    - id: kilo-gateway
+      name: 'dsh-llm-kilo-gateway'
+      config:
+        baseURL: https://api.kilo.ai/api/gateway
+        catalogUrl: https://api.kilo.ai/api/gateway/models
+        refreshIntervalMs: 86400000
+        notifyPort: 9876
+        notifyOnFirstLoad: true
+
+# The settings page (`lib/client.js`) is a browser module, not a loader entry.
+# The host collects client modules from the package a row *resolves to* and
+# reads its `dsh.client` declaration (see `dsh-client-modules`), so the single
+# `kilo-gateway` row above is already what brings `lib/client.js` into the page.
+# Registering the module path as its own row made the server try to load a
+# browser bundle as a plugin: it exports `{ apply, inject }` with no host-side
+# service, which the loader rejects with
+# «invalid plugin, expect function or object with an "apply" method, received
+# object» and the web UI renders as «Failed to load plugins».

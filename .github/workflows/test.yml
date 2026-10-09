@@ -1,0 +1,26 @@
+# The whole suite is offline by design: `npm test` must pass with no network and
+# no API key, so this workflow is a real check rather than a smoke test.
+#
+# The one thing a fork cannot reproduce is the host contract the tests encode
+# (`test/rc2-contract.test.mjs` pins the volatile-field set and the retry-policy
+# shape against the installed `@deepseek-ai/dsh-llm`). Those are ordinary dev
+# dependencies, installed below like any other, so the pinned contract is
+# exercised here too.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
