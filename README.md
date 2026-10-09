@@ -1,5 +1,10 @@
 # dsh-llm-kilo-gateway
 
+[![test](https://github.com/aqiu817/dsh-llm-kilo-gateway/actions/workflows/test.yml/badge.svg)](https://github.com/aqiu817/dsh-llm-kilo-gateway/actions/workflows/test.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
+**中文** | [English](./README.en.md)
+
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 **Kilo Gateway 免费模型**提供商插件。
 
 自动发现 Kilo Gateway 的免费模型目录，把它们注册成 Harness 里可直接使用的 provider，
@@ -138,23 +143,6 @@ dsh plugin --profile web add link:/path/to/dsh-llm-kilo-gateway
 （宿主会拒绝 `dsh --profile desktop`，因为该 profile 由 Electron 应用独占管理）。
 
 装完**重启宿主**。模型选择器里会出现 Kilo Gateway 分组，「设置 → 插件」出现设置卡片。
-
-### 从旧包名升级
-
-本插件早期叫 `@deepseek-ai/dsh-plugin-kilo-gateway`。改名的原因是那个名字**不在你的作用域里**，
-发布必然被 npm 拒绝（非该组织成员无权发布 `@deepseek-ai/*`），而且它会让人误以为这是官方包。
-
-已装过旧名的话，profile 清单里还留着旧条目。**就地改目录名是能用的**：
-宿主的 bundle 解析按 `dsh.profile.bundles` 里的字符串去找**目录**，
-而路由的行名取自包清单自己的 `name`，所以旧条目会正常加载并显示为新名（实测 `--dump-config` 无任何 skip）。
-`dsh plugin` 用的 pnpm 也不介意清单名与目录名不一致（那只是标识，不是解析键）。
-
-但建议还是把清单换成新名，避免以后自己看混：
-
-```bash
-dsh plugin --profile web remove @deepseek-ai/dsh-plugin-kilo-gateway
-dsh plugin --profile web add dsh-llm-kilo-gateway
-```
 
 ## 设置页
 
